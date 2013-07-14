@@ -1,6 +1,20 @@
 twitter-cloud
 =============
-
 A program to keep you abreast of a few twitter topics. Uses pygame to draw wordclouds of words mentioned in association with the topics of your choice.
 
-Uses: pygame, wordcloud: https://github.com/amueller/word_cloud
+Install
+=============
+Install the required dependencies listed below.
+You will need to input your own oAuth keys either into a file, or into twitterstream.py
+Run twitter-cloud.py the first few lines of main allow for user specification: screen size, the keywords to track, and the maximum number of words to keep associated with each keyword.
+Currently, there is no good way of exiting, so you'll have to kill the process :(
+
+Dependencies
+=============
+pygame
+tweepy
+wordcloud: https://github.com/amueller/word_cloud
+  which also requires:
+PIL
+scikit-learn
+
