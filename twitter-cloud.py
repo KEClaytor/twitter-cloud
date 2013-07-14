@@ -6,7 +6,6 @@ from tweepy import Stream
 
 import twitterstream as ts
 import wordcloud
-from time import sleep
 
 import pygame
 import os.path
@@ -20,14 +19,14 @@ access_token = f.readline().strip('\n')
 access_token_secret = f.readline().strip('\n')
 
 def fade_AtoB(ws,sA,sB):
-    for level in range(0,255,10):
-        print "fading... " + repr(level)
+    for level in range(0,256,15):
+        #print "fading... " + repr(level)
         sB.set_alpha(level)
         ws.fill((0,0,0))
         ws.blit(sA, (0,0))
         ws.blit(sB, (0,0))
         pygame.display.update()
-        sleep(.1)
+        pygame.time.wait(500)
     return
 
 def surface_cloud(ws,cloudname,sw,sh):
@@ -55,9 +54,10 @@ def surface_progress(ws,llist,trackwords,sw,sh):
 
 if __name__ == '__main__':
     # Set user parameters
-    screen_size = (800,400)
+    screen_size = (1300,700)
     trackwords = ['baseball','obama','nytimes']
     ntrack = len(trackwords)
+    words_max = 500
 
     pygame.init()
     window = pygame.display.set_mode(screen_size)
@@ -79,8 +79,6 @@ if __name__ == '__main__':
     print "starting streams..."
     llist = [0]*ntrack
     slist = [0]*ntrack
-    clouds = [0]*ntrack
-    words_max = 500
     for ii in range(ntrack):
         llist[ii] = ts.TwitterListener(words_max)
         slist[ii] = Stream(auth, llist[ii])
@@ -93,6 +91,7 @@ if __name__ == '__main__':
     while mainloop:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                # TODO: clean up the exit
                 pygame.quit()
                 sys.exit()
                 mainloop = False
@@ -104,13 +103,13 @@ if __name__ == '__main__':
                 new_surface = surface_progress(window,llist,trackwords,sw,sh)
                 fade_AtoB(window,old_surface,new_surface)
                 old_surface = new_surface
-                sleep(5)
+                pygame.time.wait(5000)
                 # See if there is an existing image and display that while we wait
                 if os.path.exists(trackwords[ii]+'.bmp'):
                     new_surface = surface_cloud(window,trackwords[ii],sw,sh)
                     fade_AtoB(window,old_surface,new_surface)
                     old_surface = new_surface
-                    sleep(5)
+                    pygame.time.wait(5000)
                 fade = False
             else:
                 wordcloud.make_wordcloud_rawtext(\
@@ -119,7 +118,7 @@ if __name__ == '__main__':
                 new_surface = surface_cloud(window,trackwords[ii],sw,sh)
                 fade_AtoB(window,old_surface,new_surface)
                 old_surface = new_surface
-                sleep(5)
+                pygame.time.wait(5000)
                 fade = False
 
     print "cleaning up streams..."
