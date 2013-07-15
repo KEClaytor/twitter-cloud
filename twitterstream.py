@@ -30,6 +30,8 @@ class TwitterListener (StreamListener):
         for word in new_words:
             pop = False
             badwords = ['\\','http','@']
+            if word.lower() == 'rt':
+                pop = True
             for bad in badwords:
                 if string.find(word,bad) > -1:
                     #print string.find(word,bad)
