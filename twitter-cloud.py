@@ -18,6 +18,24 @@ consumer_secret = f.readline().strip('\n')
 access_token = f.readline().strip('\n')
 access_token_secret = f.readline().strip('\n')
 
+def make_wordcloud_rawtext(text, savename, width=400, height=200):
+    import os
+    import sys
+    from sklearn.feature_extraction.text import CountVectorizer
+
+    sources = [savename]
+
+    cv = CountVectorizer(min_df=1, charset_error="ignore",
+                         stop_words="english", max_features=200)
+    counts = cv.fit_transform([text]).toarray().ravel()
+    words = np.array(cv.get_feature_names())
+    # throw away some words, normalize
+    words = words[counts > 1]
+    counts = counts[counts > 1]
+    output_filename = (os.path.splitext(os.path.basename(sources[0]))[0]
+                       + ".bmp")
+    counts = wordcloud.make_wordcloud(words, counts, output_filename, width=width, height=height)
+
 def fade_AtoB(ws,sA,sB):
     for level in range(0,256,15):
         #print "fading... " + repr(level)
@@ -26,7 +44,7 @@ def fade_AtoB(ws,sA,sB):
         ws.blit(sA, (0,0))
         ws.blit(sB, (0,0))
         pygame.display.update()
-        pygame.time.wait(500)
+        pygame.time.wait(50)
     return
 
 def surface_cloud(ws,cloudname,sw,sh):
@@ -103,22 +121,22 @@ if __name__ == '__main__':
                 new_surface = surface_progress(window,llist,trackwords,sw,sh)
                 fade_AtoB(window,old_surface,new_surface)
                 old_surface = new_surface
-                pygame.time.wait(5000)
+                pygame.time.wait(10000)
                 # See if there is an existing image and display that while we wait
                 if os.path.exists(trackwords[ii]+'.bmp'):
                     new_surface = surface_cloud(window,trackwords[ii],sw,sh)
                     fade_AtoB(window,old_surface,new_surface)
                     old_surface = new_surface
-                    pygame.time.wait(5000)
+                    pygame.time.wait(10000)
                 fade = False
             else:
-                wordcloud.make_wordcloud_rawtext(\
+                make_wordcloud_rawtext(\
                     ''.join((word + ' ')*2 for word in cwords),\
                      trackwords[ii], sw, sh)
                 new_surface = surface_cloud(window,trackwords[ii],sw,sh)
                 fade_AtoB(window,old_surface,new_surface)
                 old_surface = new_surface
-                pygame.time.wait(5000)
+                pygame.time.wait(10000)
                 fade = False
 
     print "cleaning up streams..."
