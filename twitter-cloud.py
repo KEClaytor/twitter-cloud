@@ -80,7 +80,7 @@ if __name__ == '__main__':
     except:
         trackwords = ['baseball','obama','nytimes']
     ntrack = len(trackwords)
-    delaytime = 1000
+    delaytime = 10000
     screen_size = (1300,700)
     words_max = 500
 
@@ -112,42 +112,49 @@ if __name__ == '__main__':
 
     old_surface = surface_progress(window,llist,trackwords,sw,sh)
     mainloop = True
+    # Set an initial time so it refreshes the screen right away
+    lasttime = pygame.time.get_ticks() - 6000
     while mainloop:
         # Gong for more responsiveness
-        for ii in range(ntrack):
-            for event in pygame.event.get():
-                print "event received" + repr(event)
+        for event in pygame.event.get():
+            print (event.type, pygame.QUIT, pygame.KEYDOWN)
+            if event.type == pygame.QUIT:
+                print "keytype was quit"
+                mainloop = False
+            elif event.type == pygame.KEYDOWN:
+                print "keytype was keydown"
+                if event.key == pygame.K_ESCAPE:
+                    print "keydown was escape"
                     mainloop = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        mainloop = False
 
-                if mainloop is False:
-                    print "Quitting..."
-                    print "cleaning up streams..."
-                    # Clean up our streams
-                    for stream in slist:
-                        stream.disconnect()
-                    print "disconnected from streams."
-                    print "quitting pygame..."
-                    pygame.quit()
-                    sys.exit()
-                    print "done, breaking main loop..."
-                else:
-                    # Update the screen
-                    cwords = llist[ii].word_list
-                    nwords = len(cwords)
+        if mainloop is False:
+            print "Quitting..."
+            print "cleaning up streams..."
+            # Clean up our streams
+            for stream in slist:
+                stream.disconnect()
+            print "disconnected from streams."
+            print "quitting pygame..."
+            pygame.quit()
+            sys.exit()
+            print "done, breaking main loop..."
+        else:
+            for ii in range(ntrack):
+                # Update the screen
+                cwords = llist[ii].word_list
+                nwords = len(cwords)
+                if (pygame.time.get_ticks() - lasttime) > delaytime:
                     if nwords < words_max:
                         new_surface = surface_progress(window,llist,trackwords,sw,sh)
                         fade_AtoB(window,old_surface,new_surface)
                         old_surface = new_surface
-                        pygame.time.wait(delaytime)
+                        lasttime = pygame.time.get_ticks()
                         # See if there is an existing image and display that while we wait
                         if os.path.exists(trackwords[ii]+'.bmp'):
                             new_surface = surface_cloud(window,trackwords[ii],sw,sh)
                             fade_AtoB(window,old_surface,new_surface)
                             old_surface = new_surface
-                            pygame.time.wait(delaytime)
+                            lasttime = pygame.time.get_ticks()
                     else:
                         make_wordcloud_rawtext(\
                             ''.join((word + ' ')*2 for word in cwords),\
@@ -155,6 +162,6 @@ if __name__ == '__main__':
                         new_surface = surface_cloud(window,trackwords[ii],sw,sh)
                         fade_AtoB(window,old_surface,new_surface)
                         old_surface = new_surface
-                        pygame.time.wait(delaytime)
+                        lasttime = pygame.time.get_ticks()
 
 print "All done."

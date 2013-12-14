@@ -146,7 +146,7 @@ def make_wordcloud(words, counts, fname, font_path=None, width=400, height=200,
         draw.setfont(transposed_font)
         draw.text((position[1], position[0]), word,
                   fill="hsl(%d" % random.randint(0, 255) + ", 80%, 50%)")
-    img.show()
+    #img.show()
     img.save(fname)
 
 def make_wordcloud_rawtext(text, savename, width=400, height=200):
