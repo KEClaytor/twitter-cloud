@@ -76,7 +76,7 @@ def stream_init(trackwords, words_max):
     auth.set_access_token(access_token, access_token_secret)
 
     ntrack = len(trackwords)
-    print "starting streams..."
+    print "starting streams...  ",
     llist = [0]*ntrack
     slist = [0]*ntrack
     for ii in range(ntrack):
@@ -87,7 +87,7 @@ def stream_init(trackwords, words_max):
     return (ntrack, llist, slist)
 
 def stream_close(slist):
-    print "cleaning up streams..."
+    print "cleaning up streams...  ",
     for stream in slist:
         stream.disconnect()
     print "disconnected from streams."
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     # Delay and list properties
     delaytime = 10000
     words_max = 200
-    fullscrn = True
+    fullscrn = False
     # Start the streams for these words
     ntrack, llist, slist = stream_init(trackwords, words_max)
     # A wordcloud with our trackwords while we wait
@@ -134,6 +134,8 @@ if __name__ == '__main__':
     
     old_surface = surface_progress(window,llist,trackwords,sw,sh)
     word_ii = 0
+    # Set an initial time so it refreshes the screen right away
+    lasttime = pygame.time.get_ticks() - delaytime
     while True:
         # exit the loop
         for event in pygame.event.get():
@@ -154,28 +156,28 @@ if __name__ == '__main__':
         # Update the screen
         cwords = llist[word_ii].word_list
         nwords = len(cwords)
-        if nwords < words_max:
-            # See if there is an existing image and display that while we wait
-            if os.path.exists(trackwords[word_ii]+'.bmp'):
+        if (pygame.time.get_ticks() - lasttime) > delaytime:
+            if nwords < words_max:
+                # See if there is an existing image and display that while we wait
+                if os.path.exists(trackwords[word_ii]+'.bmp'):
+                    new_surface = surface_cloud(window,trackwords[word_ii],sw,sh)
+                    fade_AtoB(window,old_surface,new_surface)
+                    old_surface = new_surface
+                else:
+                    new_surface = surface_progress(window,llist,trackwords,sw,sh)
+                    fade_AtoB(window,old_surface,new_surface)
+                    old_surface = new_surface
+            else:
+                make_wordcloud_rawtext(\
+                    ''.join((word + ' ')*2 for word in cwords),\
+                     trackwords[word_ii], sw, sh)
                 new_surface = surface_cloud(window,trackwords[word_ii],sw,sh)
                 fade_AtoB(window,old_surface,new_surface)
                 old_surface = new_surface
-            else:
-                new_surface = surface_progress(window,llist,trackwords,sw,sh)
-                fade_AtoB(window,old_surface,new_surface)
-                old_surface = new_surface
-        else:
-            make_wordcloud_rawtext(\
-                ''.join((word + ' ')*2 for word in cwords),\
-                 trackwords[ii], sw, sh)
-            new_surface = surface_cloud(window,trackwords[word_ii],sw,sh)
-            fade_AtoB(window,old_surface,new_surface)
-            old_surface = new_surface
+            lasttime = pygame.time.get_ticks()
 
         # Update our word
         word_ii += 1
-        # Delay for our specified time
-        pygame.time.wait(delaytime)
 
         # do any screen updates if needed
         pygame.display.update()
