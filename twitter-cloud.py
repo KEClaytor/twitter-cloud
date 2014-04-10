@@ -4,6 +4,7 @@
 from tweepy import OAuthHandler
 from tweepy import Stream
 
+import numpy as np
 import twitterstream as ts
 import wordcloud
 
@@ -70,37 +71,11 @@ def surface_progress(ws,llist,trackwords,sw,sh):
         screen.blit(text_surface, (40,bh*ii))
     return screen
 
-if __name__ == '__main__':
-    # Set user parameters
-    try:
-        wf = open('words.txt','r')
-        trackwords = []
-        for line in wf:
-            trackwords.append(line.strip('\n'))
-    except:
-        trackwords = ['baseball','obama','nytimes']
-    ntrack = len(trackwords)
-    delaytime = 10000
-    screen_size = (1300,700)
-    words_max = 500
-
-    pygame.init()
-    window = pygame.display.set_mode(screen_size)
-    window.fill((0, 0, 0))
-    pygame.display.update()
-    pygame.display.set_caption('Twitter-Cloud v0.1')
-    sw = window.get_width()
-    sh = window.get_height()
-    fh = sh/4/ntrack    # how high to make the progress bars
-    font = pygame.font.Font(None,fh)
-    
-    # A wordcloud with our trackwords while we wait
-    wordcloud.make_wordcloud_rawtext(\
-        ''.join((word+' ')*3 for word in trackwords), 'base', sw, sh/2)
-
+def stream_init(trackwords, words_max):
     auth = OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
 
+    ntrack = len(trackwords)
     print "starting streams..."
     llist = [0]*ntrack
     slist = [0]*ntrack
@@ -109,59 +84,99 @@ if __name__ == '__main__':
         slist[ii] = Stream(auth, llist[ii])
         slist[ii].filter(track=[trackwords[ii]],async=True)
     print "done starting streams"
+    return (ntrack, llist, slist)
 
+def stream_close(slist):
+    print "cleaning up streams..."
+    for stream in slist:
+        stream.disconnect()
+    print "disconnected from streams."
+    return
+
+if __name__ == '__main__':
+    # Initalize pygame
+    pygame.init()
+    fpsClock = pygame.time.Clock()
+    # Start our screen surface
+    screen_size = (1300,700)
+    window = pygame.display.set_mode(screen_size)
+    window.fill((0, 0, 0))
+    pygame.display.set_caption('Twitter-Cloud v0.1')
+    # Get screen size parameters for progressbars
+    sw = window.get_width()
+    sh = window.get_height()
+
+    # Set user parameters
+    try:
+        wf = open('words.txt','r')
+        trackwords = []
+        for line in wf:
+            trackwords.append(line.strip('\n'))
+    except:
+        trackwords = ['baseball','obama','nytimes']
+
+    # Delay and list properties
+    delaytime = 10000
+    words_max = 200
+    fullscrn = True
+    # Start the streams for these words
+    ntrack, llist, slist = stream_init(trackwords, words_max)
+    # A wordcloud with our trackwords while we wait
+    wordcloud.make_wordcloud_rawtext(\
+        ''.join((word+' ')*3 for word in trackwords), 'base', sw, sh/2)
+    # Enable full screen if we want it
+    if fullscrn:
+        pygame.display.toggle_fullscreen()
+
+    # Scale the font for the progress bars to be 1/4th the bar height
+    fh = sh/4/ntrack
+    font = pygame.font.Font(None,fh)
+    
     old_surface = surface_progress(window,llist,trackwords,sw,sh)
-    mainloop = True
-    # Set an initial time so it refreshes the screen right away
-    lasttime = pygame.time.get_ticks() - 6000
-    while mainloop:
-        # Gong for more responsiveness
+    word_ii = 0
+    while True:
+        # exit the loop
         for event in pygame.event.get():
-            print (event.type, pygame.QUIT, pygame.KEYDOWN)
             if event.type == pygame.QUIT:
-                print "keytype was quit"
-                mainloop = False
+                stream_close(slist)
+                pygame.quit()
+                sys.exit()
             elif event.type == pygame.KEYDOWN:
-                print "keytype was keydown"
                 if event.key == pygame.K_ESCAPE:
-                    print "keydown was escape"
-                    mainloop = False
+                    stream_close(slist)
+                    pygame.quit()
+                    sys.exit()
 
-        if mainloop is False:
-            print "Quitting..."
-            print "cleaning up streams..."
-            # Clean up our streams
-            for stream in slist:
-                stream.disconnect()
-            print "disconnected from streams."
-            print "quitting pygame..."
-            pygame.quit()
-            sys.exit()
-            print "done, breaking main loop..."
+        # Reset our counter if it's too large
+        if word_ii >= ntrack:
+            word_ii = 0
+
+        # Update the screen
+        cwords = llist[word_ii].word_list
+        nwords = len(cwords)
+        if nwords < words_max:
+            # See if there is an existing image and display that while we wait
+            if os.path.exists(trackwords[word_ii]+'.bmp'):
+                new_surface = surface_cloud(window,trackwords[word_ii],sw,sh)
+                fade_AtoB(window,old_surface,new_surface)
+                old_surface = new_surface
+            else:
+                new_surface = surface_progress(window,llist,trackwords,sw,sh)
+                fade_AtoB(window,old_surface,new_surface)
+                old_surface = new_surface
         else:
-            for ii in range(ntrack):
-                # Update the screen
-                cwords = llist[ii].word_list
-                nwords = len(cwords)
-                if (pygame.time.get_ticks() - lasttime) > delaytime:
-                    if nwords < words_max:
-                        new_surface = surface_progress(window,llist,trackwords,sw,sh)
-                        fade_AtoB(window,old_surface,new_surface)
-                        old_surface = new_surface
-                        lasttime = pygame.time.get_ticks()
-                        # See if there is an existing image and display that while we wait
-                        if os.path.exists(trackwords[ii]+'.bmp'):
-                            new_surface = surface_cloud(window,trackwords[ii],sw,sh)
-                            fade_AtoB(window,old_surface,new_surface)
-                            old_surface = new_surface
-                            lasttime = pygame.time.get_ticks()
-                    else:
-                        make_wordcloud_rawtext(\
-                            ''.join((word + ' ')*2 for word in cwords),\
-                             trackwords[ii], sw, sh)
-                        new_surface = surface_cloud(window,trackwords[ii],sw,sh)
-                        fade_AtoB(window,old_surface,new_surface)
-                        old_surface = new_surface
-                        lasttime = pygame.time.get_ticks()
+            make_wordcloud_rawtext(\
+                ''.join((word + ' ')*2 for word in cwords),\
+                 trackwords[ii], sw, sh)
+            new_surface = surface_cloud(window,trackwords[word_ii],sw,sh)
+            fade_AtoB(window,old_surface,new_surface)
+            old_surface = new_surface
 
-print "All done."
+        # Update our word
+        word_ii += 1
+        # Delay for our specified time
+        pygame.time.wait(delaytime)
+
+        # do any screen updates if needed
+        pygame.display.update()
+        fpsClock.tick(30)
